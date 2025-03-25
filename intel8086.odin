@@ -37,25 +37,40 @@ main::proc() {
 		fmt.println("Could not read file")
 		return
 	}
-	opcode := opcodes[0b111111 & int(data[0] >> 2)]
-	d := 0b1 & int(data[0] >> 1)
-	w := 0b1 & int(data[0])
-	mod := 0b11 & int(data[1] >> 6)
-	reg := 0b111 & int(data[1] >> 3)
-	rm := 0b111 & int(data[1])
 
+	phase := 0
+	opcode: string
+	d: int
+	w: int
+	mod: int
+	reg: int
+	rm: int
 	dest: string
 	source: string
 
-	if d == 1 {
-		dest = encoded_register_field(reg, w)
-		source = encoded_register_field(rm, w)
-	} else {
-		source = encoded_register_field(reg, w)
-		dest = encoded_register_field(rm, w)
+	for byte in data {
+		switch phase {
+		case 0:
+			opcode = opcodes[0b111111 & int(byte >> 2)]
+			d = 0b1 & int(byte >> 1)
+			w = 0b1 & int(byte)
+			phase += 1
+		case 1:
+			mod = 0b11 & int(byte >> 6)
+			reg = 0b111 & int(byte >> 3)
+			rm = 0b111 & int(byte)
+			if d == 1 {
+				dest = encoded_register_field(reg, w)
+				source = encoded_register_field(rm, w)
+			} else {
+				source = encoded_register_field(reg, w)
+				dest = encoded_register_field(rm, w)
+			}
+			fmt.printf("%s %s, %s\n", opcode, dest, source)
+			phase = 0
+		}
 	}
 
-	fmt.printf("%s %s, %s\n", opcode, dest, source)
 }
 
 encoded_register_field::proc(reg: int, w: int) -> string {
